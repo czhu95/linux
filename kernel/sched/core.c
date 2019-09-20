@@ -24,6 +24,8 @@
 
 DEFINE_PER_CPU_SHARED_ALIGNED(struct rq, runqueues);
 
+#include <linux/kutrace.h>
+
 #if defined(CONFIG_SCHED_DEBUG) && defined(HAVE_JUMP_LABEL)
 /*
  * Debugging: various feature bits
@@ -1777,6 +1779,8 @@ void scheduler_ipi(void)
 		this_rq()->idle_balance = 1;
 		raise_softirq_irqoff(SCHED_SOFTIRQ);
 	}
+
+	kutrace1(KUTRACE_IRQRET + RESCHEDULE_VECTOR, 0);
 	irq_exit();
 }
 
@@ -1964,6 +1968,8 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 
 	trace_sched_waking(p);
 
+	kutrace1(KUTRACE_RUNNABLE, p->pid);
+
 	/* We're going to change ->state: */
 	success = 1;
 	cpu = task_cpu(p);
@@ -2092,6 +2098,7 @@ static void try_to_wake_up_local(struct task_struct *p, struct rq_flags *rf)
 		goto out;
 
 	trace_sched_waking(p);
+	kutrace1(KUTRACE_RUNNABLE, p->pid);
 
 	if (!task_on_rq_queued(p)) {
 		if (p->in_iowait) {
@@ -3388,6 +3395,8 @@ static void __sched notrace __schedule(bool preempt)
 	struct rq *rq;
 	int cpu;
 
+	kutrace1(KUTRACE_SYSCALL64 + KUTRACE_SCHEDSYSCALL, 0);
+
 	cpu = smp_processor_id();
 	rq = cpu_rq(cpu);
 	prev = rq->curr;
@@ -3468,6 +3477,8 @@ static void __sched notrace __schedule(bool preempt)
 		++*switch_count;
 
 		trace_sched_switch(preempt, prev, next);
+		kutrace_pidname(next);
+		kutrace1(KUTRACE_USERPID, next->pid);
 
 		/* Also unlocks the rq: */
 		rq = context_switch(rq, prev, next, &rf);
@@ -3477,6 +3488,8 @@ static void __sched notrace __schedule(bool preempt)
 	}
 
 	balance_callback(rq);
+
+	kutrace1(KUTRACE_SYSRET64 + KUTRACE_SCHEDSYSCALL, 0);
 }
 
 void __noreturn do_task_dead(void)

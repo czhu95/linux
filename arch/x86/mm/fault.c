@@ -29,6 +29,8 @@
 #define CREATE_TRACE_POINTS
 #include <asm/trace/exceptions.h>
 
+#include <linux/kutrace.h>
+
 /*
  * Returns 0 if mmiotrace is disabled, or if the fault is not
  * handled by mmiotrace:
@@ -1467,7 +1469,10 @@ do_page_fault(struct pt_regs *regs, unsigned long error_code)
 	if (trace_pagefault_enabled())
 		trace_page_fault_entries(address, regs, error_code);
 
+	kutrace1(KUTRACE_TRAP + KUTRACE_PAGEFAULT, 0);
 	__do_page_fault(regs, error_code, address);
+	kutrace1(KUTRACE_TRAPRET + KUTRACE_PAGEFAULT, 0);
+
 	exception_exit(prev_state);
 }
 NOKPROBE_SYMBOL(do_page_fault);

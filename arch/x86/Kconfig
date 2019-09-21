@@ -33,6 +33,13 @@ config X86_64
 	select X86_DEV_DMA_OPS
 	select ARCH_HAS_SYSCALL_WRAPPER
 
+config KUTRACE
+	bool "kernel/user tracing, dsites"
+	def_bool n
+	depends on 64BIT
+	---help---
+	  Enables kernel/user tracing patches
+
 #
 # Arch settings
 #

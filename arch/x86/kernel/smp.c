@@ -35,6 +35,8 @@
 #include <asm/kexec.h>
 #include <asm/virtext.h>
 
+#include <linux/kutrace.h>
+
 /*
  *	Some notes on x86 processor bugs affecting SMP operation:
  *
@@ -128,17 +130,20 @@ static void native_smp_send_reschedule(int cpu)
 		WARN(1, "sched: Unexpected reschedule of offline CPU#%d!\n", cpu);
 		return;
 	}
+	kutrace1(KUTRACE_IPI, cpu);
 	apic->send_IPI(cpu, RESCHEDULE_VECTOR);
 }
 
 void native_send_call_func_single_ipi(int cpu)
 {
+	kutrace1(KUTRACE_IPI, cpu);
 	apic->send_IPI(cpu, CALL_FUNCTION_SINGLE_VECTOR);
 }
 
 void native_send_call_func_ipi(const struct cpumask *mask)
 {
 	cpumask_var_t allbutself;
+	kutrace1(KUTRACE_IPI, 0);
 
 	if (!alloc_cpumask_var(&allbutself, GFP_ATOMIC)) {
 		apic->send_IPI_mask(mask, CALL_FUNCTION_VECTOR);
@@ -260,6 +265,7 @@ finish:
 __visible void __irq_entry smp_reschedule_interrupt(struct pt_regs *regs)
 {
 	ack_APIC_irq();
+	kutrace1(KUTRACE_IRQ + RESCHEDULE_VECTOR, 0);
 	inc_irq_stat(irq_resched_count);
 	kvm_set_cpu_l1tf_flush_l1d();
 
@@ -281,20 +287,24 @@ __visible void __irq_entry smp_reschedule_interrupt(struct pt_regs *regs)
 __visible void __irq_entry smp_call_function_interrupt(struct pt_regs *regs)
 {
 	ipi_entering_ack_irq();
+	kutrace1(KUTRACE_IRQ + CALL_FUNCTION_VECTOR, 0);
 	trace_call_function_entry(CALL_FUNCTION_VECTOR);
 	inc_irq_stat(irq_call_count);
 	generic_smp_call_function_interrupt();
 	trace_call_function_exit(CALL_FUNCTION_VECTOR);
+	kutrace1(KUTRACE_IRQRET + CALL_FUNCTION_VECTOR, 0);
 	exiting_irq();
 }
 
 __visible void __irq_entry smp_call_function_single_interrupt(struct pt_regs *r)
 {
 	ipi_entering_ack_irq();
+	kutrace1(KUTRACE_IRQ + CALL_FUNCTION_SINGLE_VECTOR, 0);
 	trace_call_function_single_entry(CALL_FUNCTION_SINGLE_VECTOR);
 	inc_irq_stat(irq_call_count);
 	generic_smp_call_function_single_interrupt();
 	trace_call_function_single_exit(CALL_FUNCTION_SINGLE_VECTOR);
+	kutrace1(KUTRACE_IRQRET + CALL_FUNCTION_SINGLE_VECTOR, 0);
 	exiting_irq();
 }
 

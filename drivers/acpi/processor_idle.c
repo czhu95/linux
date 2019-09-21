@@ -34,6 +34,8 @@
 #include <linux/cpu.h>
 #include <acpi/processor.h>
 
+#include <linux/kutrace.h>
+
 /*
  * Include the apic definitions for x86 to have the APIC timer related defines
  * available also for UP (on SMP it gets magically included via linux/smp.h).
@@ -661,6 +663,7 @@ static void __cpuidle acpi_idle_do_entry(struct acpi_processor_cx *cx)
 		acpi_safe_halt();
 	} else {
 		/* IO port based C-state */
+		kutrace1(KUTRACE_MWAIT, 255);	/* Flag to make this patch distinctive */
 		inb(cx->address);
 		/* Dummy wait op - must do something useless after P_LVL2 read
 		   because chipsets cannot guarantee that STPCLK# signal
